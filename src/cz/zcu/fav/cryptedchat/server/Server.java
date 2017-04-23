@@ -1,5 +1,8 @@
 package cz.zcu.fav.cryptedchat.server;
 
+import cz.zcu.fav.cryptedchat.crypto.Cypher;
+import cz.zcu.fav.cryptedchat.crypto.RSA;
+import cz.zcu.fav.cryptedchat.crypto.RSA.PublicKey;
 import cz.zcu.fav.cryptedchat.shared.BitUtils;
 import cz.zcu.fav.cryptedchat.shared.MyPacket;
 import java.io.IOException;
@@ -9,10 +12,12 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 
 public class Server extends Thread {
 
     private final ArrayList<ClientThread> clients = new ArrayList<>();
+    private final HashMap<Long, Cypher> clientsCypher = new HashMap<>();
 
     private boolean running = true;
 
@@ -38,6 +43,24 @@ public class Server extends Thread {
                     e.printStackTrace();
                 }
             });
+    }
+
+    public void assignPublicKey(final long clientId, final PublicKey publicKey) {
+        clientsCypher.put(clientId, new RSA(publicKey));
+    }
+
+    public void removePublicKey(final long clientId) {
+        clientsCypher.remove(clientId);
+    }
+
+    public byte[] cryptData(final byte[] data, final long clientId) {
+        Cypher cypher = clientsCypher.get(clientId);
+        if (cypher == null) {
+            return data;
+        }
+
+        return cypher.encrypt(data);
+
     }
 
     @Override

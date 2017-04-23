@@ -1,10 +1,12 @@
 package cz.zcu.fav.cryptedchat.server;
 
+import cz.zcu.fav.cryptedchat.crypto.Cypher;
+import cz.zcu.fav.cryptedchat.crypto.RSA;
+import cz.zcu.fav.cryptedchat.crypto.RSA.PublicKey;
 import cz.zcu.fav.cryptedchat.server.Server.ServerHandler;
 import cz.zcu.fav.cryptedchat.shared.BitUtils;
 import cz.zcu.fav.cryptedchat.shared.MyPacket;
 import cz.zcu.fav.cryptedchat.shared.MyPacket.Status;
-import cz.zcu.fav.cryptedchat.crypto.RSA.PublicKey;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
@@ -18,6 +20,7 @@ public class ServerApp {
     private static final String ACTION_EXIT = "exit";
     private final ConcurrentHashMap<Long, List<MyPacket>> packets = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<Long, PublicKey> clientsKeys = new ConcurrentHashMap<>();
+    private final Cypher cypher = new RSA(1024);
 
     private final Server.ServerHandler handler = new ServerHandler() {
         @Override
@@ -96,9 +99,23 @@ public class ServerApp {
                 final byte[] keyE = BitUtils.packetToDataArray(packetWithKeyE);
                 final byte[] keyN = BitUtils.packetToDataArray(packetWithKeyN);
 
-                clientsKeys.put(clientId, new PublicKey(new BigInteger(keyE), new BigInteger(keyN)));
+                PublicKey publicKey = new PublicKey(new BigInteger(keyE), new BigInteger(keyN));
+                clientsKeys.put(clientId, publicKey);
+                server.assignPublicKey(clientId, publicKey);
 
-                server.writeTo(clientId, new MyPacket().setMessageId(MyPacket.MESSAGE_ECHO));
+                if (cypher instanceof RSA) {
+                    PublicKey serverPublicKey = ((RSA) cypher).getPublicKey();
+                    byte[][] data = serverPublicKey.getRawData();
+                    List<MyPacket> packetN = MyPacket
+                        .buildPackets(data[PublicKey.INDEX_N], MyPacket.MESSAGE_PUBLIC_KEY_N);
+                    packetN.get(packetN.size() - 1).setStatus(Status.CONTINUE);
+                    List<MyPacket> packetE = MyPacket
+                        .buildPackets(data[PublicKey.INDEX_E], MyPacket.MESSAGE_PUBLIC_KEY_E);
+
+                    packetN.stream().forEach(packet -> server.writeTo(clientId, packet));
+                    packetE.stream().forEach(packet -> server.writeTo(clientId, packet));
+                }
+
                 break;
             default:
                 System.out.printf("Nebyl rozpoznán typ packetu");

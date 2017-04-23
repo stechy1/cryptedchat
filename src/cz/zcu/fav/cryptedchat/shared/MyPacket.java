@@ -1,5 +1,7 @@
 package cz.zcu.fav.cryptedchat.shared;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -57,6 +59,22 @@ public class MyPacket {
         packets.get(packets.size() - 1).setStatus(Status.END);
 
         return packets;
+    }
+
+    public static byte[] buildData(final List<MyPacket> packets) {
+        ByteArrayOutputStream stream = new ByteArrayOutputStream(packets.size() * DATA_SIZE);
+
+        packets.stream().forEach(packet -> {
+            byte[] data = new byte[packet.getLength()];
+            packet.getData(data);
+            try {
+                stream.write(data);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
+
+        return stream.toByteArray();
     }
 
     public MyPacket() {

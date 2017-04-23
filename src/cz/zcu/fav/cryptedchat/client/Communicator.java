@@ -5,17 +5,21 @@ import cz.zcu.fav.cryptedchat.crypto.Cypher;
 import cz.zcu.fav.cryptedchat.crypto.RSA;
 import cz.zcu.fav.cryptedchat.crypto.RSA.PublicKey;
 import cz.zcu.fav.cryptedchat.crypto.SimpleCypher;
+import cz.zcu.fav.cryptedchat.shared.BitUtils;
 import cz.zcu.fav.cryptedchat.shared.MyPacket;
 import cz.zcu.fav.cryptedchat.shared.MyPacket.Status;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class Communicator implements OnDataReceiver {
 
     private final List<MyPacket> cache = new ArrayList<>();
     private final String ip;
     private final int port;
-    private final Cypher cypher;
+    private final Cypher cypherInput;
+    private Cypher cypherOutput = new SimpleCypher();
     private Client client;
 
     private OnDisconnectListener disconnectListener;
@@ -41,7 +45,7 @@ public class Communicator implements OnDataReceiver {
         System.out.println("Vytvářím komunikátor");
         this.ip = ip;
         this.port = port;
-        this.cypher = cypher;
+        this.cypherInput = cypher;
 
         clientConnectedListener = () -> {
             if (cypher instanceof RSA) {
@@ -59,8 +63,23 @@ public class Communicator implements OnDataReceiver {
 
     private void processPacket(final List<MyPacket> packets, final byte messageId) {
         switch (messageId) {
-            case MyPacket.MESSAGE_ECHO:
+            case MyPacket.MESSAGE_PUBLIC_KEY_N:
+                final List<MyPacket> packetWithKeyE = packets.stream()
+                    .filter(packet -> packet.hasMessageId(MyPacket.MESSAGE_PUBLIC_KEY_E))
+                    .collect(Collectors.toList());
+                final List<MyPacket> packetWithKeyN = packets.stream()
+                    .filter(packet -> packet.hasMessageId(MyPacket.MESSAGE_PUBLIC_KEY_N))
+                    .collect(Collectors.toList());
+
+                final byte[] keyE = BitUtils.packetToDataArray(packetWithKeyE);
+                final byte[] keyN = BitUtils.packetToDataArray(packetWithKeyN);
+
+                cypherOutput = new RSA(new PublicKey(new BigInteger(keyN), new BigInteger(keyE)));
+
                 System.out.println("Bylo přijato echo od serveru");
+                break;
+            case MyPacket.MESSAGE_SEND:
+
                 break;
             default:
                 System.out.println("Nebyl rozpoznán typ packetu");
@@ -89,20 +108,18 @@ public class Communicator implements OnDataReceiver {
     }
 
     public void sendMessage(byte[] message) {
-        client.write(new MyPacket(cypher.encrypt(message))
+        client.write(new MyPacket(cypherOutput.encrypt(message))
             .setMessageId(MyPacket.MESSAGE_SEND)
             .setLength(message.length)
             .toByteArray());
 
     }
 
-    public void setConnectedListener(
-        OnConnectedListener connectedListener) {
+    public void setConnectedListener(OnConnectedListener connectedListener) {
         this.connectedListener = connectedListener;
     }
 
-    public void setDisconnectListener(
-        OnDisconnectListener disconnectListener) {
+    public void setDisconnectListener(OnDisconnectListener disconnectListener) {
         this.disconnectListener = disconnectListener;
     }
 

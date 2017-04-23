@@ -109,7 +109,9 @@ public class Client extends Thread {
                     totalSize += count;
 
                     if (totalSize >= MyPacket.SIZE) {
-                        MyPacket packet = new MyPacket(message);
+                        MyPacket packet = new MyPacket();
+                        packet.setRawData(message);
+                        System.out.println("Received: " + BitUtils.byteArrayToHex(message));
                         receiver.onReceive(packet);
 
                         totalSize %= MyPacket.SIZE;
