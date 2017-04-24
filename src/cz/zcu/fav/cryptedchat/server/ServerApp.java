@@ -117,8 +117,8 @@ public class ServerApp {
                     List<MyPacket> packetE = MyPacket
                         .buildPackets(data[PublicKey.INDEX_E], MyPacket.MESSAGE_PUBLIC_KEY_E);
 
-                    packetN.stream().forEach(packet -> server.writeTo(clientId, packet));
-                    packetE.stream().forEach(packet -> server.writeTo(clientId, packet));
+                    server.writeTo(clientId, packetN);
+                    server.writeTo(clientId, packetE);
                 }
 
                 break;

@@ -13,6 +13,7 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 
 public class Server extends Thread {
 
@@ -43,6 +44,31 @@ public class Server extends Thread {
                     e.printStackTrace();
                 }
             });
+    }
+
+    public void writeTo(final long clientId, final List<MyPacket> packets) {
+        clients.stream()
+            .filter(clientThread -> clientThread.id == clientId)
+            .findFirst()
+            .ifPresent(clientThread -> {
+                    packets.forEach(packet -> {
+                        try {
+                            clientThread.write(packet.toByteArray());
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    });
+            });
+    }
+
+    public void sendBroadcast(final MyPacket packet) {
+        clients.stream().forEach(clientThread -> {
+            try {
+                clientThread.write(packet.toByteArray());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
     }
 
     public void assignPublicKey(final long clientId, final PublicKey publicKey) {

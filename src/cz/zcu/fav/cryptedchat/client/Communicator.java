@@ -110,11 +110,8 @@ public class Communicator implements OnDataReceiver {
     }
 
     public void sendMessage(byte[] message) {
-        sendBytes(new MyPacket(cypherOutput.encrypt(message))
-            .setMessageId(MyPacket.MESSAGE_SEND)
-            .setLength(message.length)
-            .toByteArray());
-
+        List<MyPacket> packets = MyPacket.buildPackets(message, MyPacket.MESSAGE_SEND);
+        packets.forEach(packet -> sendBytes(packet.toByteArray()));
     }
 
     public void setConnectedListener(OnConnectedListener connectedListener) {
