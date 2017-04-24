@@ -88,6 +88,11 @@ public class ServerApp {
 
     private void processPackets(final List<MyPacket> packets, final byte messageId, final long clientId) {
         switch (messageId) {
+            case MyPacket.MESSAGE_ECHO:
+                final byte[] dataCrypted = BitUtils.packetToDataArray(packets);
+                final byte[] dataEncrypt = cypher.decrypt(dataCrypted);
+                System.out.println(new String(dataEncrypt));
+                break;
             case MyPacket.MESSAGE_PUBLIC_KEY_N:
                 final List<MyPacket> packetWithKeyE = packets.stream()
                     .filter(packet -> packet.hasMessageId(MyPacket.MESSAGE_PUBLIC_KEY_E))

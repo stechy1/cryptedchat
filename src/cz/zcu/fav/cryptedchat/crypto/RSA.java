@@ -1,5 +1,7 @@
 package cz.zcu.fav.cryptedchat.crypto;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.math.BigInteger;
 import java.util.Random;
 
@@ -55,12 +57,54 @@ public class RSA implements Cypher {
 
     @Override
     public byte[] encrypt(byte[] message) {
-        return new BigInteger(message).modPow(e, n).toByteArray();
+        final int bitLength = n.bitLength();
+        final ByteArrayOutputStream outputStream = new ByteArrayOutputStream(message.length);
+        final int iteration = (int) Math.round(Math.ceil(message.length / (double) bitLength));
+
+        int offset = 0;
+        int remaining = message.length;
+
+        for (int i = 0; i < iteration; i++) {
+            final int count = (remaining > bitLength) ? bitLength : remaining;
+            final byte[] data = new byte[count];
+            System.arraycopy(message, offset, data, 0, count);
+            try {
+                outputStream.write(new BigInteger(data).modPow(e, n).toByteArray());
+            } catch (IOException ex) {
+                System.out.println("Data se nepodařilo zašifrovat");
+            }
+
+            offset += count;
+            remaining -= count;
+        }
+
+        return outputStream.toByteArray();
     }
 
     @Override
     public byte[] decrypt(byte[] message) {
-        return new BigInteger(message).modPow(d, n).toByteArray();
+        final int bitLength = n.bitLength();
+        final ByteArrayOutputStream outputStream = new ByteArrayOutputStream(message.length);
+        final int iteration = (int) Math.round(Math.ceil(message.length / (double) bitLength));
+
+        int offset = 0;
+        int remaining = message.length;
+
+        for (int i = 0; i < iteration; i++) {
+            final int count = (remaining > bitLength) ? bitLength : remaining;
+            final byte[] data = new byte[count];
+            System.arraycopy(message, offset, data, 0, count);
+            try {
+                outputStream.write(new BigInteger(data).modPow(d, n).toByteArray());
+            } catch (IOException ex) {
+                System.out.println("Data se nepodařilo zašifrovat");
+            }
+
+            offset += count;
+            remaining -= count;
+        }
+
+        return outputStream.toByteArray();
     }
 
     public final PublicKey getPublicKey() {

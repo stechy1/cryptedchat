@@ -25,6 +25,8 @@ public class MyPacket {
     public static final byte MESSAGE_PUBLIC_KEY_N = 0x02;
     public static final byte MESSAGE_ECHO = 0x03;
     public static final byte MESSAGE_SEND = 0x04;
+    public static final byte MESSAGE_CONTACTS = 0x05;
+    public static final byte MESSAGE_USER_STATE_CHANGED = 0x06;
 
     private static final int DATA_SIZE = SIZE - 4;
     private static final int INDEX_LENGTH = 0;
@@ -44,8 +46,8 @@ public class MyPacket {
         int remaining = src.length;
 
         for (int i = 0; i < iterations; i++) {
-            int count = (remaining > DATA_SIZE) ? DATA_SIZE : remaining;
-            MyPacket packet = new MyPacket()
+            final int count = (remaining > DATA_SIZE) ? DATA_SIZE : remaining;
+            final MyPacket packet = new MyPacket()
                 .setMessageId(messageId)
                 .setLength(count)
                 .setStatus(Status.CONTINUE);

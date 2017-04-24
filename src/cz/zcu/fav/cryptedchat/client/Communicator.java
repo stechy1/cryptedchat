@@ -55,8 +55,8 @@ public class Communicator implements OnDataReceiver {
                 packetN.get(packetN.size() - 1).setStatus(Status.CONTINUE);
                 List<MyPacket> packetE = MyPacket.buildPackets(data[PublicKey.INDEX_E], MyPacket.MESSAGE_PUBLIC_KEY_E);
 
-                packetN.stream().forEach(packet -> sendPlainMessage(packet.toByteArray()));
-                packetE.stream().forEach(packet -> sendPlainMessage(packet.toByteArray()));
+                packetN.stream().forEach(packet -> sendBytes(packet.toByteArray()));
+                packetE.stream().forEach(packet -> sendBytes(packet.toByteArray()));
             }
         };
     }
@@ -76,6 +76,8 @@ public class Communicator implements OnDataReceiver {
 
                 cypherOutput = new RSA(new PublicKey(new BigInteger(keyN), new BigInteger(keyE)));
 
+                List<MyPacket> packetResponse = MyPacket.buildPackets(cypherOutput.encrypt(new String("Hello world").getBytes()), MyPacket.MESSAGE_ECHO);
+                packetResponse.stream().forEach(packet -> sendBytes(packet.toByteArray()));
                 System.out.println("Bylo přijato echo od serveru");
                 break;
             case MyPacket.MESSAGE_SEND:
@@ -103,12 +105,12 @@ public class Communicator implements OnDataReceiver {
         }
     }
 
-    public void sendPlainMessage(byte[] message) {
-        client.write(message);
+    public void sendBytes(byte[] bytes) {
+        client.write(bytes);
     }
 
     public void sendMessage(byte[] message) {
-        client.write(new MyPacket(cypherOutput.encrypt(message))
+        sendBytes(new MyPacket(cypherOutput.encrypt(message))
             .setMessageId(MyPacket.MESSAGE_SEND)
             .setLength(message.length)
             .toByteArray());
