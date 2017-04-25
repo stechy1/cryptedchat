@@ -3,7 +3,6 @@ package cz.zcu.fav.cryptedchat.server;
 import cz.zcu.fav.cryptedchat.crypto.Cypher;
 import cz.zcu.fav.cryptedchat.crypto.RSA;
 import cz.zcu.fav.cryptedchat.crypto.RSA.PublicKey;
-import cz.zcu.fav.cryptedchat.shared.BitUtils;
 import cz.zcu.fav.cryptedchat.shared.MyPacket;
 import java.io.IOException;
 import java.io.InputStream;
@@ -181,7 +180,6 @@ public class Server extends Thread {
                         totalSize += count;
 
                         if (totalSize >= MyPacket.SIZE) {
-                            System.out.println("Received: " + BitUtils.byteArrayToHex(message));
                             MyPacket packet = new MyPacket();
                             packet.setRawData(message);
                             receiver.onDataReceived(packet, id);
@@ -192,7 +190,7 @@ public class Server extends Thread {
                         }
                     }
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    System.out.println("Bylo ukončeno spojení socketu s klientem: " + id);
                 }
             }
             receiver.onClientDisconnected(id);

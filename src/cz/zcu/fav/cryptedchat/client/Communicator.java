@@ -5,13 +5,12 @@ import cz.zcu.fav.cryptedchat.crypto.Cypher;
 import cz.zcu.fav.cryptedchat.crypto.RSA;
 import cz.zcu.fav.cryptedchat.crypto.RSA.PublicKey;
 import cz.zcu.fav.cryptedchat.crypto.SimpleCypher;
-import cz.zcu.fav.cryptedchat.shared.BitUtils;
 import cz.zcu.fav.cryptedchat.shared.MyPacket;
 import cz.zcu.fav.cryptedchat.shared.MyPacket.Status;
-import java.math.BigInteger;
+import cz.zcu.fav.cryptedchat.shared.message.PacketWithPublicKey;
+import cz.zcu.fav.cryptedchat.shared.Pair;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class Communicator implements OnDataReceiver {
 
@@ -50,13 +49,10 @@ public class Communicator implements OnDataReceiver {
         clientConnectedListener = () -> {
             if (cypher instanceof RSA) {
                 PublicKey publicKey = ((RSA) cypher).getPublicKey();
-                byte[][] data = publicKey.getRawData();
-                List<MyPacket> packetN = MyPacket.buildPackets(data[PublicKey.INDEX_N], MyPacket.MESSAGE_PUBLIC_KEY_N);
-                packetN.get(packetN.size() - 1).setStatus(Status.CONTINUE);
-                List<MyPacket> packetE = MyPacket.buildPackets(data[PublicKey.INDEX_E], MyPacket.MESSAGE_PUBLIC_KEY_E);
+                Pair<List<MyPacket>, List<MyPacket>> packetsWithPublicKey = PacketWithPublicKey.getPackets(publicKey);
 
-                packetN.stream().forEach(packet -> sendBytes(packet.toByteArray()));
-                packetE.stream().forEach(packet -> sendBytes(packet.toByteArray()));
+                write(packetsWithPublicKey.first);
+                write(packetsWithPublicKey.second);
             }
         };
     }
@@ -64,20 +60,9 @@ public class Communicator implements OnDataReceiver {
     private void processPacket(final List<MyPacket> packets, final byte messageId) {
         switch (messageId) {
             case MyPacket.MESSAGE_PUBLIC_KEY_N:
-                final List<MyPacket> packetWithKeyE = packets.stream()
-                    .filter(packet -> packet.hasMessageId(MyPacket.MESSAGE_PUBLIC_KEY_E))
-                    .collect(Collectors.toList());
-                final List<MyPacket> packetWithKeyN = packets.stream()
-                    .filter(packet -> packet.hasMessageId(MyPacket.MESSAGE_PUBLIC_KEY_N))
-                    .collect(Collectors.toList());
+                final PublicKey publicKey = PacketWithPublicKey.getPublicKey(packets);
 
-                final byte[] keyE = BitUtils.packetToDataArray(packetWithKeyE);
-                final byte[] keyN = BitUtils.packetToDataArray(packetWithKeyN);
-
-                cypherOutput = new RSA(new PublicKey(new BigInteger(keyN), new BigInteger(keyE)));
-
-                List<MyPacket> packetResponse = MyPacket.buildPackets(cypherOutput.encrypt(new String("Hello world").getBytes()), MyPacket.MESSAGE_ECHO);
-                packetResponse.stream().forEach(packet -> sendBytes(packet.toByteArray()));
+                cypherOutput = new RSA(publicKey);
                 System.out.println("Bylo přijato echo od serveru");
                 break;
             case MyPacket.MESSAGE_SEND:
@@ -103,6 +88,14 @@ public class Communicator implements OnDataReceiver {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+    }
+
+    public void write(MyPacket packet) {
+        client.write(packet.toByteArray());
+    }
+
+    public void write(List<MyPacket> packets) {
+        packets.forEach(packet -> write(packet));
     }
 
     public void sendBytes(byte[] bytes) {

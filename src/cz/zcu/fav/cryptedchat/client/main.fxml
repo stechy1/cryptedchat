@@ -36,9 +36,9 @@
       <ListView fx:id="listUsers" VBox.vgrow="ALWAYS" />
     <GridPane>
       <Label text="IP adresa" />
-      <TextField fx:id="txtIp" prefWidth="167.0" GridPane.columnIndex="1" />
+      <TextField fx:id="txtIp" prefWidth="167.0" GridPane.columnIndex="1" text="localhost" />
       <Label text="Port" GridPane.rowIndex="1" />
-      <TextField fx:id="txtPort" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+      <TextField fx:id="txtPort" GridPane.columnIndex="1" GridPane.rowIndex="1" text="16958" />
       <Button fx:id="btnConnect" onAction="#handleConnect" text="Připojit" GridPane.rowIndex="2" />
       <Button fx:id="btnDisconnect" onAction="#handleDisconnect" text="Odpjit" GridPane.columnIndex="1" GridPane.rowIndex="2" />
          <columnConstraints>

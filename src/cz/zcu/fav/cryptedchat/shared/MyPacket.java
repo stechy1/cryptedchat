@@ -28,7 +28,7 @@ public class MyPacket {
     public static final byte MESSAGE_CONTACTS = 0x05;
     public static final byte MESSAGE_USER_STATE_CHANGED = 0x06;
 
-    private static final int DATA_SIZE = SIZE - 4;
+    private static final int DATA_SIZE = SIZE - 3;
     private static final int INDEX_LENGTH = 0;
     private static final int INDEX_STATE = 0;
     private static final int INDEX_MESSAGE_ID = 2;

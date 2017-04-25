@@ -7,12 +7,12 @@ import cz.zcu.fav.cryptedchat.server.Server.ServerHandler;
 import cz.zcu.fav.cryptedchat.shared.BitUtils;
 import cz.zcu.fav.cryptedchat.shared.MyPacket;
 import cz.zcu.fav.cryptedchat.shared.MyPacket.Status;
-import java.math.BigInteger;
+import cz.zcu.fav.cryptedchat.shared.message.PacketWithPublicKey;
+import cz.zcu.fav.cryptedchat.shared.Pair;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 public class ServerApp {
 
@@ -38,7 +38,6 @@ public class ServerApp {
 
         @Override
         public void onDataReceived(MyPacket packet, long clientId) {
-            System.out.println("Byla přijata data od klienta: " + clientId);
             List<MyPacket> clientPackets = packets.get(clientId);
             clientPackets.add(packet);
 
@@ -88,37 +87,22 @@ public class ServerApp {
 
     private void processPackets(final List<MyPacket> packets, final byte messageId, final long clientId) {
         switch (messageId) {
-            case MyPacket.MESSAGE_ECHO:
+            case MyPacket.MESSAGE_SEND:
                 final byte[] dataCrypted = BitUtils.packetToDataArray(packets);
                 final byte[] dataEncrypt = cypher.decrypt(dataCrypted);
                 System.out.println(new String(dataEncrypt));
                 break;
             case MyPacket.MESSAGE_PUBLIC_KEY_N:
-                final List<MyPacket> packetWithKeyE = packets.stream()
-                    .filter(packet -> packet.hasMessageId(MyPacket.MESSAGE_PUBLIC_KEY_E))
-                    .collect(Collectors.toList());
-                final List<MyPacket> packetWithKeyN = packets.stream()
-                    .filter(packet -> packet.hasMessageId(MyPacket.MESSAGE_PUBLIC_KEY_N))
-                    .collect(Collectors.toList());
-
-                final byte[] keyE = BitUtils.packetToDataArray(packetWithKeyE);
-                final byte[] keyN = BitUtils.packetToDataArray(packetWithKeyN);
-
-                PublicKey publicKey = new PublicKey(new BigInteger(keyE), new BigInteger(keyN));
+                final PublicKey publicKey = PacketWithPublicKey.getPublicKey(packets);
                 clientsKeys.put(clientId, publicKey);
                 server.assignPublicKey(clientId, publicKey);
 
                 if (cypher instanceof RSA) {
                     PublicKey serverPublicKey = ((RSA) cypher).getPublicKey();
-                    byte[][] data = serverPublicKey.getRawData();
-                    List<MyPacket> packetN = MyPacket
-                        .buildPackets(data[PublicKey.INDEX_N], MyPacket.MESSAGE_PUBLIC_KEY_N);
-                    packetN.get(packetN.size() - 1).setStatus(Status.CONTINUE);
-                    List<MyPacket> packetE = MyPacket
-                        .buildPackets(data[PublicKey.INDEX_E], MyPacket.MESSAGE_PUBLIC_KEY_E);
+                    Pair<List<MyPacket>, List<MyPacket>> packetsWithPublicKey = PacketWithPublicKey.getPackets(serverPublicKey);
 
-                    server.writeTo(clientId, packetN);
-                    server.writeTo(clientId, packetE);
+                    server.writeTo(clientId, packetsWithPublicKey.first);
+                    server.writeTo(clientId, packetsWithPublicKey.second);
                 }
 
                 break;

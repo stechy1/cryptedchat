@@ -28,31 +28,10 @@ public class RSA implements Cypher {
         System.out.println("N: " + n.toString());
     }
 
-    public RSA(BigInteger e, BigInteger d, BigInteger N) {
-        this.e = e;
-        this.d = d;
-        this.n = N;
-    }
-
     public RSA(PublicKey publicKey) {
         n = publicKey.n;
         e = publicKey.e;
         d = null;
-    }
-
-    public RSA(PrivateKey privateKey) {
-        n = privateKey.n;
-        d = privateKey.d;
-        e = null;
-    }
-
-    public static String byteArrayToHex(byte[] array) {
-        StringBuilder sb = new StringBuilder(array.length * 2);
-        for(byte b : array) {
-            sb.append(String.format("%02x ", b));
-        }
-        sb.delete(sb.length() - 1, sb.length());
-        return sb.toString();
     }
 
     @Override
@@ -83,7 +62,7 @@ public class RSA implements Cypher {
 
     @Override
     public byte[] decrypt(byte[] message) {
-        final int bitLength = n.bitLength();
+        final int bitLength = 64;
         final ByteArrayOutputStream outputStream = new ByteArrayOutputStream(message.length);
         final int iteration = (int) Math.round(Math.ceil(message.length / (double) bitLength));
 
@@ -111,10 +90,6 @@ public class RSA implements Cypher {
         return new PublicKey(n, e);
     }
 
-    public final PrivateKey getPrivateKey() {
-        return new PrivateKey(n, d);
-    }
-
     public static class PublicKey {
         public static final int INDEX_N = 0;
         public static final int INDEX_E = 1;
@@ -123,9 +98,6 @@ public class RSA implements Cypher {
         public final BigInteger e;
 
         public PublicKey(BigInteger n, BigInteger e) {
-            System.out.println("Vytvářím nový veřejný klíč");
-            System.out.println("N: " + n.toString());
-            System.out.println("E: " + e.toString());
             this.n = n;
             this.e = e;
         }
@@ -134,27 +106,6 @@ public class RSA implements Cypher {
             final byte[][] result = new byte[2][];
             result[INDEX_N] = n.toByteArray();
             result[INDEX_E] = e.toByteArray();
-
-            return result;
-        }
-    }
-
-    public static class PrivateKey {
-        public static final int INDEX_N = 0;
-        public static final int INDEX_D = 1;
-
-        public final BigInteger n;
-        public final BigInteger d;
-
-        public PrivateKey(BigInteger n, BigInteger d) {
-            this.n = n;
-            this.d = d;
-        }
-
-        public byte[][] getRawData() {
-            final byte[][] result = new byte[2][];
-            result[INDEX_N] = n.toByteArray();
-            result[INDEX_D] = d.toByteArray();
 
             return result;
         }

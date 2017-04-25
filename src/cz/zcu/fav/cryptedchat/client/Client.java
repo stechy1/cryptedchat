@@ -1,6 +1,5 @@
 package cz.zcu.fav.cryptedchat.client;
 
-import cz.zcu.fav.cryptedchat.shared.BitUtils;
 import cz.zcu.fav.cryptedchat.shared.MyPacket;
 import java.io.IOException;
 import java.io.InputStream;
@@ -47,7 +46,6 @@ public class Client extends Thread {
 
     public void write(byte[] bytes) {
         try {
-            System.out.println("Posílám, length: " + bytes.length + "; data: " + BitUtils.byteArrayToHex(bytes));
             writer.write(bytes);
         } catch (IOException e) {
             e.printStackTrace();
@@ -111,7 +109,6 @@ public class Client extends Thread {
                     if (totalSize >= MyPacket.SIZE) {
                         MyPacket packet = new MyPacket();
                         packet.setRawData(message);
-                        System.out.println("Received: " + BitUtils.byteArrayToHex(message));
                         receiver.onReceive(packet);
 
                         totalSize %= MyPacket.SIZE;
