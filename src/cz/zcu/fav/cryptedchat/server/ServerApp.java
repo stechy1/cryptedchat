@@ -5,11 +5,14 @@ import cz.zcu.fav.cryptedchat.crypto.RSA;
 import cz.zcu.fav.cryptedchat.crypto.RSA.PublicKey;
 import cz.zcu.fav.cryptedchat.server.Server.ServerHandler;
 import cz.zcu.fav.cryptedchat.shared.BitUtils;
+import cz.zcu.fav.cryptedchat.shared.ClientState;
 import cz.zcu.fav.cryptedchat.shared.MyPacket;
 import cz.zcu.fav.cryptedchat.shared.MyPacket.Status;
-import cz.zcu.fav.cryptedchat.shared.message.PacketWithPublicKey;
 import cz.zcu.fav.cryptedchat.shared.Pair;
+import cz.zcu.fav.cryptedchat.shared.message.PacketWithContacts;
+import cz.zcu.fav.cryptedchat.shared.message.PacketWithPublicKey;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.ConcurrentHashMap;
@@ -27,6 +30,12 @@ public class ServerApp {
         public void onClientConnected(long clientId) {
             System.out.println("Připojil se nový klient: " + clientId);
             packets.put(clientId, new ArrayList<>());
+            MyPacket packet = new MyPacket().setMessageId(MyPacket.MESSAGE_USER_STATE_CHANGED);
+            packet.addData(new byte[]{(byte) ClientState.ONLINE.ordinal()});
+            final byte[] longData = new byte[Long.BYTES];
+            BitUtils.longToBytes(clientId, longData, 0);
+            packet.addData(longData);
+            server.sendBroadcast(clientId, packet);
         }
 
         @Override
@@ -34,6 +43,12 @@ public class ServerApp {
             System.out.println("Klient " + clientId + " se odpojil");
             packets.remove(clientId);
             clientsKeys.remove(clientId);
+            MyPacket packet = new MyPacket().setMessageId(MyPacket.MESSAGE_USER_STATE_CHANGED);
+            packet.addData(new byte[]{(byte) ClientState.OFFLINE.ordinal()});
+            final byte[] longData = new byte[Long.BYTES];
+            BitUtils.longToBytes(clientId, longData, 0);
+            packet.addData(longData);
+            server.sendBroadcast(clientId, packet);
         }
 
         @Override
@@ -88,7 +103,7 @@ public class ServerApp {
     private void processPackets(final List<MyPacket> packets, final byte messageId, final long clientId) {
         switch (messageId) {
             case MyPacket.MESSAGE_SEND:
-                final byte[] dataCrypted = BitUtils.packetToDataArray(packets);
+                final byte[] dataCrypted = MyPacket.packetToDataArray(packets);
                 final byte[] dataEncrypt = cypher.decrypt(dataCrypted);
                 System.out.println(new String(dataEncrypt));
                 break;
@@ -104,7 +119,12 @@ public class ServerApp {
                     server.writeTo(clientId, packetsWithPublicKey.first);
                     server.writeTo(clientId, packetsWithPublicKey.second);
                 }
+                break;
+            case MyPacket.MESSAGE_CONTACTS:
+                Enumeration<Long> users = this.packets.keys();
+                List<MyPacket> ids = PacketWithContacts.getPackets(users, clientId);
 
+                server.writeTo(clientId, ids);
                 break;
             default:
                 System.out.printf("Nebyl rozpoznán typ packetu");

@@ -5,10 +5,13 @@ import cz.zcu.fav.cryptedchat.crypto.Cypher;
 import cz.zcu.fav.cryptedchat.crypto.RSA;
 import cz.zcu.fav.cryptedchat.crypto.RSA.PublicKey;
 import cz.zcu.fav.cryptedchat.crypto.SimpleCypher;
+import cz.zcu.fav.cryptedchat.shared.ClientState;
 import cz.zcu.fav.cryptedchat.shared.MyPacket;
 import cz.zcu.fav.cryptedchat.shared.MyPacket.Status;
-import cz.zcu.fav.cryptedchat.shared.message.PacketWithPublicKey;
 import cz.zcu.fav.cryptedchat.shared.Pair;
+import cz.zcu.fav.cryptedchat.shared.message.PacketWithContacts;
+import cz.zcu.fav.cryptedchat.shared.message.PacketWithPublicKey;
+import cz.zcu.fav.cryptedchat.shared.message.PacketWithUserState;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -35,6 +38,7 @@ public class Communicator implements OnDataReceiver {
             disconnectListener.onDisconnect();
         }
     };
+    private OnClientsChangeListener clientsChangeListener;
 
     public Communicator(String ip, int port) {
         this(ip, port, new SimpleCypher());
@@ -63,7 +67,21 @@ public class Communicator implements OnDataReceiver {
                 final PublicKey publicKey = PacketWithPublicKey.getPublicKey(packets);
 
                 cypherOutput = new RSA(publicKey);
-                System.out.println("Bylo přijato echo od serveru");
+
+                MyPacket requestContacts = new MyPacket().setMessageId(MyPacket.MESSAGE_CONTACTS);
+                sendBytes(requestContacts.toByteArray());
+                break;
+            case MyPacket.MESSAGE_CONTACTS:
+                List<Long> users = PacketWithContacts.getUsers(packets);
+                if (clientsChangeListener != null) {
+                    clientsChangeListener.onListRequest(users);
+                }
+                break;
+            case MyPacket.MESSAGE_USER_STATE_CHANGED:
+                Pair<Long, ClientState> clientStatePair = PacketWithUserState.getState(packets);
+                if (clientsChangeListener != null) {
+                    clientsChangeListener.onClientChangeState(clientStatePair.first, clientStatePair.second);
+                }
                 break;
             case MyPacket.MESSAGE_SEND:
 
@@ -115,6 +133,10 @@ public class Communicator implements OnDataReceiver {
         this.disconnectListener = disconnectListener;
     }
 
+    public void setClientsChangeListener(OnClientsChangeListener clientsChangeListener) {
+        this.clientsChangeListener = clientsChangeListener;
+    }
+
     @Override
     public void onReceive(final MyPacket packet) {
         cache.add(packet);
@@ -131,5 +153,13 @@ public class Communicator implements OnDataReceiver {
 
     public interface OnDisconnectListener {
         void onDisconnect();
+    }
+
+    public interface OnClientsChangeListener {
+
+        void onListRequest(List<Long> users);
+
+        void onClientChangeState(long clientId, ClientState clientState);
+
     }
 }

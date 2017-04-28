@@ -11,12 +11,13 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
 public class Server extends Thread {
 
-    private final ArrayList<ClientThread> clients = new ArrayList<>();
+    private final List<ClientThread> clients = Collections.synchronizedList(new ArrayList<>());
     private final HashMap<Long, Cypher> clientsCypher = new HashMap<>();
 
     private boolean running = true;
@@ -60,8 +61,10 @@ public class Server extends Thread {
             });
     }
 
-    public void sendBroadcast(final MyPacket packet) {
-        clients.stream().forEach(clientThread -> {
+    public void sendBroadcast(final long clientId, final MyPacket packet) {
+        clients.stream()
+            .filter(clientThread -> clientThread.id != clientId)
+            .forEach(clientThread -> {
             try {
                 clientThread.write(packet.toByteArray());
             } catch (IOException e) {
@@ -105,6 +108,7 @@ public class Server extends Thread {
                 ClientThread clientThread = new ClientThread(System.currentTimeMillis(), client);
                 clients.add(clientThread);
                 clientThread.start();
+                receiver.onClientConnected(clientThread.id);
             } catch (IOException e) {
                 System.out.println("Server socket byl uzavřen");
             }
@@ -123,6 +127,9 @@ public class Server extends Thread {
     public void kill() {
         System.out.println("Ukončuji server");
         running = false;
+        if (serverSocket == null) {
+            return;
+        }
         try {
             serverSocket.close();
         } catch (IOException e) {
@@ -144,14 +151,13 @@ public class Server extends Thread {
             this.socket = socket;
             this.reader = socket.getInputStream();
             this.writer = socket.getOutputStream();
-
-            receiver.onClientConnected(id);
         }
 
         public void kill() {
             System.out.println("Zabíjím klienta s id: " + id);
             connected = false;
             try {
+                writer.flush();
                 socket.close();
             } catch (IOException e) {
                 e.printStackTrace();
@@ -171,8 +177,12 @@ public class Server extends Thread {
                 int count;
                 int totalSize = 0;
                 try {
-                    while (reader.available() != 0) {
+                    while (reader.available() >= 0) {
                         count = reader.read(buffer);
+                        if (count < 0) {
+                            connected = false;
+                            break;
+                        }
                         int freeBytes = MyPacket.SIZE - totalSize;
                         int byteCount = count > freeBytes ? freeBytes : count;
 
@@ -190,10 +200,13 @@ public class Server extends Thread {
                         }
                     }
                 } catch (IOException e) {
+                    connected = false;
                     System.out.println("Bylo ukončeno spojení socketu s klientem: " + id);
                 }
             }
             receiver.onClientDisconnected(id);
+            clients.remove(this);
+            removePublicKey(id);
         }
     }
     

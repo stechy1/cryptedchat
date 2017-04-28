@@ -1,13 +1,17 @@
 package cz.zcu.fav.cryptedchat.shared;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.util.List;
+import java.nio.ByteBuffer;
 
 /**
  * Created by petr on 21.4.17.
  */
 public final class BitUtils {
+
+    private static final int BYTE_SIZE = 8;
+    private static final int INT_LENGTH = 4;
+    private static final int LONG_LENGTH = 8;
+    private static final int INT_SIZE = 24;
+    private static final int LONG_SIZE = 56;
 
     private BitUtils() {}
 
@@ -29,21 +33,6 @@ public final class BitUtils {
         return setBit(original, value, false);
     }
 
-    public static byte[] packetToDataArray(final List<MyPacket> packets) {
-        final ByteArrayOutputStream stream = new ByteArrayOutputStream(packets.size() * MyPacket.SIZE);
-        packets.stream().forEach(packet -> {
-            final byte[] bytes = new byte[packet.getLength()];
-            packet.getData(bytes);
-            try {
-                stream.write(bytes);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        });
-
-        return stream.toByteArray();
-    }
-
     public static String byteArrayToHex(byte[] array) {
         StringBuilder sb = new StringBuilder(array.length * 2);
         for(byte b : array) {
@@ -51,6 +40,36 @@ public final class BitUtils {
         }
         sb.delete(sb.length() - 1, sb.length());
         return sb.toString();
+    }
+
+    public static int intFromBytes(byte[] src, int offset) {
+        byte[] data = new byte[Integer.BYTES];
+        System.arraycopy(src, offset, data, 0, Integer.BYTES);
+        ByteBuffer buffer = ByteBuffer.allocate(Integer.BYTES);
+        buffer.put(data);
+        buffer.flip();
+        return buffer.getInt();
+    }
+
+    public static void intToBytes(int value, byte[] dest, int offset) {
+        ByteBuffer buffer = ByteBuffer.allocate(Integer.BYTES);
+        buffer.putInt(value);
+        System.arraycopy(buffer.array(), 0, dest, offset, Integer.BYTES);
+    }
+
+    public static long longFromBytes(byte[] src, int offset) {
+        byte[] data = new byte[Long.BYTES];
+        System.arraycopy(src, offset, data, 0, Long.BYTES);
+        ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
+        buffer.put(data);
+        buffer.flip();
+        return buffer.getLong();
+    }
+
+    public static void longToBytes(long value, byte[] dest, int offset) {
+        ByteBuffer buffer = ByteBuffer.allocate(Long.BYTES);
+        buffer.putLong(value);
+        System.arraycopy(buffer.array(), 0, dest, offset, Long.BYTES);
     }
 
 }

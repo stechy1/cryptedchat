@@ -3,6 +3,7 @@ package cz.zcu.fav.cryptedchat.shared;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -28,7 +29,7 @@ public class MyPacket {
     public static final byte MESSAGE_CONTACTS = 0x05;
     public static final byte MESSAGE_USER_STATE_CHANGED = 0x06;
 
-    private static final int DATA_SIZE = SIZE - 3;
+    public static final int DATA_SIZE = SIZE - 3;
     private static final int INDEX_LENGTH = 0;
     private static final int INDEX_STATE = 0;
     private static final int INDEX_MESSAGE_ID = 2;
@@ -40,6 +41,9 @@ public class MyPacket {
     private int dataOffset = INDEX_DATA;
 
     public static List<MyPacket> buildPackets(byte[] src, byte messageId) {
+        if (src.length == 0) {
+            return Collections.singletonList(new MyPacket().setMessageId(messageId));
+        }
         final int iterations = (int) Math.round(Math.ceil(src.length / (double) MyPacket.DATA_SIZE));
         final List<MyPacket> packets = new ArrayList<>(iterations);
         int offset = 0;
@@ -63,14 +67,13 @@ public class MyPacket {
         return packets;
     }
 
-    public static byte[] buildData(final List<MyPacket> packets) {
-        ByteArrayOutputStream stream = new ByteArrayOutputStream(packets.size() * DATA_SIZE);
-
+    public static byte[] packetToDataArray(final List<MyPacket> packets) {
+        final ByteArrayOutputStream stream = new ByteArrayOutputStream(packets.size() * SIZE);
         packets.stream().forEach(packet -> {
-            byte[] data = new byte[packet.getLength()];
-            packet.getData(data);
+            final byte[] bytes = new byte[packet.getLength()];
+            packet.getData(bytes);
             try {
-                stream.write(data);
+                stream.write(bytes);
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -146,7 +149,9 @@ public class MyPacket {
         final int overflow = length - DATA_SIZE;
         final int copyCount = (overflow > 0) ? DATA_SIZE : length;
         System.arraycopy(src, offset, data, INDEX_DATA, copyCount);
+
         dataOffset = INDEX_DATA + copyCount;
+        setLength(dataOffset - INDEX_DATA);
 
         return overflow;
     }
@@ -159,9 +164,12 @@ public class MyPacket {
         final int dataLength = src.length - offset;
         final int freeSpace = DATA_SIZE - dataOffset;
         final int overflow = dataLength - freeSpace;
-        final int copyCount = (overflow > 0) ? freeSpace : overflow;
+        final int copyCount = (overflow > 0) ? freeSpace : dataLength;
         System.arraycopy(src, offset, data, dataOffset, copyCount);
+
         dataOffset += copyCount;
+        setLength(dataOffset - INDEX_DATA);
+
 
         return overflow;
     }

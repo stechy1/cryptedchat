@@ -1,7 +1,6 @@
 package cz.zcu.fav.cryptedchat.shared.message;
 
 import cz.zcu.fav.cryptedchat.crypto.RSA.PublicKey;
-import cz.zcu.fav.cryptedchat.shared.BitUtils;
 import cz.zcu.fav.cryptedchat.shared.MyPacket;
 import cz.zcu.fav.cryptedchat.shared.MyPacket.Status;
 import cz.zcu.fav.cryptedchat.shared.Pair;
@@ -21,8 +20,8 @@ public class PacketWithPublicKey {
             .filter(packet -> packet.hasMessageId(MyPacket.MESSAGE_PUBLIC_KEY_E))
             .collect(Collectors.toList());
 
-        final byte[] keyN = BitUtils.packetToDataArray(packetWithKeyN);
-        final byte[] keyE = BitUtils.packetToDataArray(packetWithKeyE);
+        final byte[] keyN = MyPacket.packetToDataArray(packetWithKeyN);
+        final byte[] keyE = MyPacket.packetToDataArray(packetWithKeyE);
 
         return new PublicKey(new BigInteger(keyN), new BigInteger(keyE));
     }

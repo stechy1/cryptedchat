@@ -100,6 +100,10 @@ public class Client extends Thread {
             try {
                 while(reader.available() != 0) {
                     count = reader.read(buffer);
+                    if (count < 0) {
+                        running = false;
+                        break;
+                    }
                     int freeBytes = MyPacket.SIZE - totalSize;
                     int byteCount = count > freeBytes ? freeBytes : count;
 
@@ -126,6 +130,7 @@ public class Client extends Thread {
         if (disconnectListener != null) {
             disconnectListener.onDisconnect();
         }
+        System.out.println("Klient se odpojil");
     }
 
     public void setConnectedListener(

@@ -36,6 +36,7 @@ public class RSA implements Cypher {
 
     @Override
     public byte[] encrypt(byte[] message) {
+//        return new BigInteger(message).modPow(e, n).toByteArray();
         final int bitLength = n.bitLength();
         final ByteArrayOutputStream outputStream = new ByteArrayOutputStream(message.length);
         final int iteration = (int) Math.round(Math.ceil(message.length / (double) bitLength));
@@ -62,7 +63,8 @@ public class RSA implements Cypher {
 
     @Override
     public byte[] decrypt(byte[] message) {
-        final int bitLength = 64;
+//        return new BigInteger(message).modPow(d, n).toByteArray();
+        final int bitLength = n.bitLength();
         final ByteArrayOutputStream outputStream = new ByteArrayOutputStream(message.length);
         final int iteration = (int) Math.round(Math.ceil(message.length / (double) bitLength));
 
