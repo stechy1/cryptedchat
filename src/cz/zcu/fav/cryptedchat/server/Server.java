@@ -88,7 +88,6 @@ public class Server extends Thread {
         }
 
         return cypher.encrypt(data);
-
     }
 
     @Override

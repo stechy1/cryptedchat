@@ -68,8 +68,13 @@ public class MyPacket {
     }
 
     public static byte[] packetToDataArray(final List<MyPacket> packets) {
+        return packetToDataArray(packets, 0);
+    }
+
+    public static byte[] packetToDataArray(final List<MyPacket> packets, int listOffset) {
         final ByteArrayOutputStream stream = new ByteArrayOutputStream(packets.size() * SIZE);
-        packets.stream().forEach(packet -> {
+        for (int i = listOffset; i < packets.size(); i++) {
+            MyPacket packet = packets.get(i);
             final byte[] bytes = new byte[packet.getLength()];
             packet.getData(bytes);
             try {
@@ -77,7 +82,7 @@ public class MyPacket {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-        });
+        }
 
         return stream.toByteArray();
     }
@@ -134,7 +139,8 @@ public class MyPacket {
     }
 
     public void getData(byte[] dest, int offset) {
-        System.arraycopy(data, INDEX_DATA, dest, offset, getLength());
+        final int dataLength = getLength();
+        System.arraycopy(data, INDEX_DATA, dest, offset, dest.length < dataLength ? dest.length : dataLength);
     }
 
     public int setData(byte[] src) {

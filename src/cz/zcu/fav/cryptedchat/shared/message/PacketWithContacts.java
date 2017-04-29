@@ -21,7 +21,7 @@ public class PacketWithContacts {
                 continue;
             }
             byte[] dest = new byte[8];
-            BitUtils.longToBytes(next, dest, 0);
+            BitUtils.longToBytes(next, dest);
             try {
                 outputStream.write(dest);
             } catch (IOException e) {

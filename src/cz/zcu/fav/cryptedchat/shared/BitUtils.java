@@ -57,6 +57,10 @@ public final class BitUtils {
         System.arraycopy(buffer.array(), 0, dest, offset, Integer.BYTES);
     }
 
+    public static long longFromBytes(byte[] src) {
+        return longFromBytes(src, 0);
+    }
+
     public static long longFromBytes(byte[] src, int offset) {
         byte[] data = new byte[Long.BYTES];
         System.arraycopy(src, offset, data, 0, Long.BYTES);
@@ -64,6 +68,10 @@ public final class BitUtils {
         buffer.put(data);
         buffer.flip();
         return buffer.getLong();
+    }
+
+    public static void longToBytes(long value, byte[] dest) {
+        longToBytes(value, dest, 0);
     }
 
     public static void longToBytes(long value, byte[] dest, int offset) {

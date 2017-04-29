@@ -1,12 +1,18 @@
-package cz.zcu.fav.cryptedchat.client;
+package cz.zcu.fav.cryptedchat.client.controller;
 
+import cz.zcu.fav.cryptedchat.client.App;
+import cz.zcu.fav.cryptedchat.client.App.OnCloseListener;
+import cz.zcu.fav.cryptedchat.client.Communicator;
 import cz.zcu.fav.cryptedchat.client.Communicator.OnClientsChangeListener;
 import cz.zcu.fav.cryptedchat.client.widget.ClientListCell;
 import cz.zcu.fav.cryptedchat.crypto.Cypher;
 import cz.zcu.fav.cryptedchat.crypto.RSA;
 import cz.zcu.fav.cryptedchat.shared.ClientState;
+import java.io.IOException;
 import java.net.URL;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.ResourceBundle;
 import java.util.function.UnaryOperator;
@@ -20,15 +26,18 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
+import javafx.scene.Parent;
 import javafx.scene.control.Button;
 import javafx.scene.control.ListView;
+import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextFormatter;
 
-public class Controller implements Initializable, App.OnCloseListener {
+public class MainController implements Initializable, OnCloseListener {
 
     @FXML
     private Button btnDisconnect;
@@ -45,8 +54,10 @@ public class Controller implements Initializable, App.OnCloseListener {
     @FXML
     private Button btnConnect;
 
+    private final Map<Long, ChatController> clientsChatControllers = new HashMap<>();
     private final BooleanProperty running = new SimpleBooleanProperty(false);
     private final ObservableList<Client> clients = FXCollections.observableArrayList();
+    private final LongProperty selectedClient = new SimpleLongProperty(-1);
     private Cypher cypher = new RSA(1024);
 
     private Communicator communicator;
@@ -85,9 +96,46 @@ public class Controller implements Initializable, App.OnCloseListener {
         }
     };
 
+    private final Communicator.OnMessageReceiveListener messageReceiveListener = (message, clientId) -> Platform
+        .runLater(() -> {
+            MessageHandler handler = clientsChatControllers.get(clientId);
+            if (handler == null) {
+                // TODO otevřít nové okno a zobrazit zprávu
+            } else {
+                handler.addMessage(message, false);
+            }
+        });
+
     private void disconnect() {
-        communicator.disconnect();
+        if (communicator != null) {
+            communicator.disconnect();
+        }
         running.set(false);
+        clients.clear();
+    }
+
+    private void openTab(final long clientId) {
+        final Optional<Tab> result = tabMessages.getTabs().stream()
+            .filter(tab1 -> Long.parseLong(tab1.getText()) == clientId)
+            .findFirst();
+        Tab tab;
+        if (result.isPresent()) {
+            tab = result.get();
+        } else {
+            FXMLLoader loader = new FXMLLoader(App.class.getResource("chat.fxml"));
+            try {
+                Parent parent = loader.load();
+                ChatController controller = loader.getController();
+
+                tab = new Tab(Long.toString(clientId), parent);
+                tabMessages.getTabs().add(tab);
+                clientsChatControllers.put(clientId, controller);
+            } catch (IOException e) {
+                e.printStackTrace();
+                return;
+            }
+        }
+        tabMessages.getSelectionModel().select(tab);
     }
 
     @Override
@@ -99,6 +147,22 @@ public class Controller implements Initializable, App.OnCloseListener {
 
         listUsers.setItems(clients);
         listUsers.setCellFactory(param -> new ClientListCell());
+        listUsers.getSelectionModel().selectedItemProperty()
+            .addListener((observable, oldValue, newValue) -> {
+                if (newValue == null) {
+                    return;
+                }
+                openTab(newValue.getId());
+            });
+
+        tabMessages.getSelectionModel().selectedItemProperty().addListener(
+            (observable, oldValue, newValue) -> {
+                if (newValue == null) {
+                    selectedClient.set(-1);
+                } else {
+                    selectedClient.set(Long.parseLong(newValue.getText()));
+                }
+            });
     }
 
     public void handleConnect(ActionEvent actionEvent) {
@@ -108,12 +172,19 @@ public class Controller implements Initializable, App.OnCloseListener {
         communicator = new Communicator(ip, port, cypher);
         communicator.setDisconnectListener(disconnectListener);
         communicator.setClientsChangeListener(clientsChangeListener);
+        communicator.setMessageReceiveListener(messageReceiveListener);
         communicator.connect();
     }
 
     public void handleSendMessage(ActionEvent actionEvent) {
-        String message = textMessage.getText();
-        communicator.sendMessage(message.getBytes());
+        MessageHandler handler = clientsChatControllers.get(selectedClient.getValue());
+        if (handler == null) {
+            return;
+        }
+
+        final String message = textMessage.getText();
+        communicator.sendMessage(message.getBytes(), selectedClient.getValue());
+        handler.addMessage(message, true);
     }
 
     @Override
@@ -154,5 +225,34 @@ public class Controller implements Initializable, App.OnCloseListener {
         public LongProperty idProperty() {
             return id;
         }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+
+            Client client = (Client) o;
+
+            if (!online.equals(client.online)) {
+                return false;
+            }
+            return id.equals(client.id);
+        }
+
+        @Override
+        public int hashCode() {
+            int result = online.hashCode();
+            result = 31 * result + id.hashCode();
+            return result;
+        }
+    }
+
+    public interface MessageHandler {
+
+        void addMessage(String message, boolean fromMe);
     }
 }

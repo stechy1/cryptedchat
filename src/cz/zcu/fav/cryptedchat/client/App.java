@@ -14,12 +14,12 @@ public class App extends Application {
 
     @Override
     public void start(Stage primaryStage) throws Exception {
-        FXMLLoader loader = new FXMLLoader(getClass().getResource(
-            "main.fxml"));
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("main.fxml"));
         Parent root = loader.load();
         OnCloseListener closeListener = loader.getController();
         Scene scene = new Scene(root);
         primaryStage.setScene(scene);
+        primaryStage.setTitle("Šifrovaný chat");
         primaryStage.setWidth(600);
         primaryStage.setHeight(400);
         primaryStage.setOnCloseRequest(event -> closeListener.onClose());

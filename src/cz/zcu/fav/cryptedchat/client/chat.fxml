@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.layout.VBox?>
+<ScrollPane xmlns="http://javafx.com/javafx/8.0.112" xmlns:fx="http://javafx.com/fxml/1"
+  fx:controller="cz.zcu.fav.cryptedchat.client.controller.ChatController" >
+  <VBox fx:id="container"></VBox>
+</ScrollPane>

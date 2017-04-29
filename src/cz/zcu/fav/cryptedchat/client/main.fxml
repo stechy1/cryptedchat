@@ -14,7 +14,7 @@
 
 <?import javafx.scene.control.ListView?>
 <?import javafx.scene.control.TabPane?>
-<BorderPane prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8.0.112" xmlns:fx="http://javafx.com/fxml/1" fx:controller="cz.zcu.fav.cryptedchat.client.Controller">
+<BorderPane prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8.0.112" xmlns:fx="http://javafx.com/fxml/1" fx:controller="cz.zcu.fav.cryptedchat.client.controller.MainController">
   <center>
     <TabPane fx:id="tabMessages"/>
   </center>

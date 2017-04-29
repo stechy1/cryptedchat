@@ -22,7 +22,6 @@ public class ServerApp {
     private static final Scanner scanner = new Scanner(System.in);
     private static final String ACTION_EXIT = "exit";
     private final ConcurrentHashMap<Long, List<MyPacket>> packets = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<Long, PublicKey> clientsKeys = new ConcurrentHashMap<>();
     private final Cypher cypher = new RSA(1024);
 
     private final Server.ServerHandler handler = new ServerHandler() {
@@ -33,7 +32,7 @@ public class ServerApp {
             MyPacket packet = new MyPacket().setMessageId(MyPacket.MESSAGE_USER_STATE_CHANGED);
             packet.addData(new byte[]{(byte) ClientState.ONLINE.ordinal()});
             final byte[] longData = new byte[Long.BYTES];
-            BitUtils.longToBytes(clientId, longData, 0);
+            BitUtils.longToBytes(clientId, longData);
             packet.addData(longData);
             server.sendBroadcast(clientId, packet);
         }
@@ -42,11 +41,10 @@ public class ServerApp {
         public void onClientDisconnected(long clientId) {
             System.out.println("Klient " + clientId + " se odpojil");
             packets.remove(clientId);
-            clientsKeys.remove(clientId);
             MyPacket packet = new MyPacket().setMessageId(MyPacket.MESSAGE_USER_STATE_CHANGED);
             packet.addData(new byte[]{(byte) ClientState.OFFLINE.ordinal()});
             final byte[] longData = new byte[Long.BYTES];
-            BitUtils.longToBytes(clientId, longData, 0);
+            BitUtils.longToBytes(clientId, longData);
             packet.addData(longData);
             server.sendBroadcast(clientId, packet);
         }
@@ -103,13 +101,26 @@ public class ServerApp {
     private void processPackets(final List<MyPacket> packets, final byte messageId, final long clientId) {
         switch (messageId) {
             case MyPacket.MESSAGE_SEND:
-                final byte[] dataCrypted = MyPacket.packetToDataArray(packets);
+                MyPacket infoPacket = packets.get(0);
+                final byte[] clientDestinationIdRaw = new byte[Long.BYTES];
+                infoPacket.getData(clientDestinationIdRaw);
+                final long clientDestinationId = BitUtils.longFromBytes(clientDestinationIdRaw);
+                final byte[] dataCrypted = MyPacket.packetToDataArray(packets, 1);
                 final byte[] dataEncrypt = cypher.decrypt(dataCrypted);
+                final byte[] dataCrypted2 = server.cryptData(dataEncrypt, clientDestinationId);
+                final List<MyPacket> dataClientCrypted = MyPacket.buildPackets(dataCrypted2, MyPacket.MESSAGE_SEND);
+                final byte[] clientSenderIdRaw = new byte[Long.BYTES];
+                BitUtils.longToBytes(clientId, clientSenderIdRaw);
+                MyPacket clientSenderId = new MyPacket()
+                    .setMessageId(MyPacket.MESSAGE_SEND)
+                    .setStatus(Status.CONTINUE);
+                clientSenderId.addData(clientSenderIdRaw);
+                server.writeTo(clientDestinationId, clientSenderId);
+                server.writeTo(clientDestinationId, dataClientCrypted);
                 System.out.println(new String(dataEncrypt));
                 break;
             case MyPacket.MESSAGE_PUBLIC_KEY_N:
                 final PublicKey publicKey = PacketWithPublicKey.getPublicKey(packets);
-                clientsKeys.put(clientId, publicKey);
                 server.assignPublicKey(clientId, publicKey);
 
                 if (cypher instanceof RSA) {

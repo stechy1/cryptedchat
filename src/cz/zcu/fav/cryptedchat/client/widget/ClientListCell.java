@@ -1,7 +1,7 @@
 package cz.zcu.fav.cryptedchat.client.widget;
 
-import cz.zcu.fav.cryptedchat.client.Controller;
-import cz.zcu.fav.cryptedchat.client.Controller.Client;
+import cz.zcu.fav.cryptedchat.client.controller.MainController;
+import cz.zcu.fav.cryptedchat.client.controller.MainController.Client;
 import javafx.beans.binding.Bindings;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
@@ -10,7 +10,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.util.converter.NumberStringConverter;
 
-public class ClientListCell extends ListCell<Controller.Client> {
+public class ClientListCell extends ListCell<MainController.Client> {
 
     private final HBox container = new HBox();
     private final Circle statusIndicator = new Circle(10);
